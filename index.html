@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Iravath Robot UI</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+    }
+    .container {
+      width: 400px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.2);
+      box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.2);
+      text-align: center;
+      border-radius: 10px;
+      backdrop-filter: blur(10px);
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 5px;
+    }
+    input {
+      background: rgba(255, 255, 255, 0.8);
+    }
+    button {
+      background: #ff7eb3;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .dashboard {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+    }
+    .controls {
+      width: 30%;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 20px;
+      color: white;
+    }
+    .robot {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+    }
+    .robot img {
+      max-width: 90%;
+      max-height: 90%;
+    }
+    input[type=range] {
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="auth" class="container">
+    <h2>Login</h2>
+    <input type="text" id="username" placeholder="Username" />
+    <input type="password" id="password" placeholder="Password" />
+    <button onclick="login()">Login</button>
+    <p>Use <b>idp</b> as both username and password.</p>
+  </div>
+
+  <div id="dashboard" class="dashboard" style="display: none;">
+    <div class="controls">
+      <h3>Robot Arm Control</h3>
+      <button onclick="connectToArduino()">🔌 Connect to Arduino</button>
+      <label>Base Angle: <span id="baseVal">0</span>°</label>
+      <input type="range" min="0" max="180" id="base" oninput="updateAngle('base')"/>
+      <label>Shoulder Angle: <span id="shoulderVal">0</span>°</label>
+      <input type="range" min="0" max="180" id="shoulder" oninput="updateAngle('shoulder')"/>
+      <label>Elbow Angle: <span id="elbowVal">0</span>°</label>
+      <input type="range" min="0" max="180" id="elbow" oninput="updateAngle('elbow')"/>
+      <label>Wrist Angle: <span id="wristVal">0</span>°</label>
+      <input type="range" min="0" max="180" id="wrist" oninput="updateAngle('wrist')"/>
+    </div>
+    <div class="robot">
+      <img src="C:\Users\HP\Desktop\robot.jpg" alt="Robot Arm" />
+    </div>
+  </div>
+
+  <script>
+    let port, writer;
+
+    function login() {
+      const username = document.getElementById("username").value;
+      const password = document.getElementById("password").value;
+      if (username === "idp" && password === "idp") {
+        document.getElementById("auth").style.display = "none";
+        document.getElementById("dashboard").style.display = "flex";
+      } else {
+        alert("Invalid credentials! Use 'idp' for both username and password.");
+      }
+    }
+
+    async function connectToArduino() {
+      try {
+        port = await navigator.serial.requestPort();
+        await port.open({ baudRate: 9600 });
+        writer = port.writable.getWriter();
+        console.log("Arduino connected.");
+      } catch (err) {
+        console.error("Connection failed: ", err);
+        alert("Could not connect to Arduino.");
+      }
+    }
+
+    async function sendCommand(joint, value) {
+      if (!writer) {
+        alert("Please connect to Arduino first.");
+        return;
+      }
+      const command = JSON.stringify({ joint, value }) + "\n";
+      const encoded = new TextEncoder().encode(command);
+      await writer.write(encoded);
+    }
+
+    function updateAngle(joint) {
+      const value = document.getElementById(joint).value;
+      document.getElementById(joint + 'Val').innerText = value;
+      sendCommand(joint, value);
+    }
+  </script>
+</body>
+</html>
